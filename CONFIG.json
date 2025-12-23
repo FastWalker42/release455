@@ -1,0 +1,10 @@
+{
+  "DOMAIN": "api.ghj.lol",
+
+  "BOT_TOKEN_PROD": "8302701954:AAHi4HlSs6EMD0_nwnsKNifjFgDp0tFAnz4",
+  "BOT_TOKEN_TEST": "8302701954:AAHi4HlSs6EMD0_nwnsKNifjFgDp0tFAnz4",
+
+  "CRYPTOBOT": {
+    "API_KEY": "51452:AA8blvXCCNBdBGPDHDAnOySAueZo1VCVwOR"
+  }
+}
