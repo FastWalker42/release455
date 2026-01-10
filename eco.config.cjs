@@ -1,0 +1,82 @@
+module.exports = {
+  apps: [
+    {
+      name: 'server',
+      script: 'npx',
+      args: 'tsx workers/server.ts',
+      autorestart: true,
+      watch: true,
+      watch_options: {
+        usePolling: true,
+        interval: 1000,
+      },
+      ignore_watch: ['node_modules', 'src', '.git'],
+      max_memory_restart: '1G',
+    },
+    {
+      name: 'game',
+      script: 'npx',
+      args: 'tsx workers/game.ts',
+      autorestart: true,
+      watch: true,
+      watch_options: {
+        usePolling: true,
+        interval: 1000,
+      },
+      ignore_watch: ['node_modules', 'src', '.git'],
+      max_memory_restart: '1G',
+    },
+    {
+      name: 'bank',
+      script: 'npx',
+      args: 'tsx workers/bank.ts',
+      autorestart: true,
+      watch: true,
+      watch_options: {
+        usePolling: true,
+        interval: 1000,
+      },
+      ignore_watch: ['node_modules', 'src', '.git'],
+      max_memory_restart: '1G',
+    },
+    {
+      name: 'lastPlayers',
+      script: 'npx',
+      args: 'tsx workers/lastPlayers.ts',
+      autorestart: true,
+      watch: true,
+      watch_options: {
+        usePolling: true,
+        interval: 1000,
+      },
+      ignore_watch: ['node_modules', 'src', '.git'],
+      max_memory_restart: '1G',
+    },
+    {
+      name: 'polling',
+      script: 'npx',
+      args: 'tsx workers/polling.ts',
+      autorestart: true,
+      watch: true,
+      watch_options: {
+        usePolling: true,
+        interval: 1000,
+      },
+      ignore_watch: ['node_modules', 'src', '.git'],
+      max_memory_restart: '1G',
+    },
+    {
+      name: 'giveaways',
+      script: 'npx',
+      args: 'tsx workers/giveaways.ts',
+      autorestart: true,
+      watch: true,
+      watch_options: {
+        usePolling: true,
+        interval: 1000,
+      },
+      ignore_watch: ['node_modules', 'src', '.git'],
+      max_memory_restart: '1G',
+    },
+  ],
+}

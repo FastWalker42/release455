@@ -54,16 +54,27 @@ export const deleteInvoice = (invoice_id: number | string) => {
   return res
 }
 
-export const invoiceInTON = async (invoice: CryptoBotInvoice) => {
-  if (invoice.asset === 'TON') {
-    return invoice.amount
-  } else {
-    const price = Number(invoice.paid_usd_rate)
-    const response = await fetch('https://tonapi.io/v2/rates?tokens=ton&currencies=usd')
-    const ratesData: any = await response.json()
-    const usdrate = ratesData.rates.TON.prices.USD
-    return (Number(invoice.paid_usd_rate) * price) / usdrate
+export const tonToUsd = async (tonAmount: number): Promise<number> => {
+  const response = await fetch('https://tonapi.io/v2/rates?tokens=ton&currencies=usd')
+  const data: any = await response.json()
+
+  const tonUsdRate = Number(data.rates.TON.prices.USD) // USD за 1 TON
+  return tonAmount * tonUsdRate
+}
+
+export const invoiceInTON = async (invoice: CryptoBotInvoice): Promise<number> => {
+  // Если платёж уже в TON — просто возвращаем
+  if (invoice.paid_asset === 'TON') {
+    return Number(invoice.paid_amount)
   }
+
+  const paidAmount = Number(invoice.paid_amount) // количество крипты
+  const usdRate = Number(invoice.paid_usd_rate) // курс крипты к USD
+  const paidUsd = paidAmount * usdRate // сумма в USD
+
+  const tonUsd = await tonToUsd(1)
+
+  return paidUsd / tonUsd
 }
 
 export const cryptoBotCreateCheck = async (params: CryptoBotCheckParams): Promise<CryptoBotCheck> => {

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en" style="overflow: hidden">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>rocket-app</title>
+    <script src="https://telegram.org/js/telegram-web-app.js?59"></script>
+    <style>
+      #loading-screen {
+        opacity: 1;
+        transition: opacity 0.2s ease-in;
+      }
+
+      #loading-screen.fade-out {
+        opacity: 0;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body style="background: black; display: flex; justify-content: center; margin: 0">
+    <img src="/logo.png" style="position: fixed; width: 14vh; margin-top: 6.4vh; z-index: 250" />
+
+    <span id="loading-screen" style="z-index: 248; display: flex; justify-content: center; position: fixed">
+      <div style="background: radial-gradient(#060056, black); width: 100vw; height: 100vh; position: fixed"></div>
+      <div style="position: fixed">
+        <img
+          src="https://i.ibb.co/v64DYTks/ezgif-com-optimize-2.gif"
+          style="rotate: 50deg; height: 19vh; margin-top: 34.4vh; padding-left: 4vw"
+        />
+        <div
+          style="
+            width: 60vw;
+            max-width: 22vh;
+            height: 2.2vh;
+            min-height: 8px;
+            background: white;
+            border-radius: 999px;
+            overflow: hidden;
+            margin-top: 2vh;
+          "
+        >
+          <div
+            id="progress-bar"
+            style="height: 100%; width: 0%; background: #3b82f6; border-radius: 999px; transition: width 0.3s ease"
+          ></div>
+          <script>
+            const bar = document.getElementById('progress-bar')
+            let progress = 0
+
+            const interval = setInterval(() => {
+              progress += 0.15
+              bar.style.width = progress + '%'
+              if (progress >= 100) clearInterval(interval)
+            }, 1)
+          </script>
+        </div>
+      </div>
+    </span>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    <script>
+      let tg = window.Telegram.WebApp
+      tg.requestFullscreen()
+
+      var TG = tg
+    </script>
+
+    <script>
+      window.hideLoadingScreen = () => {
+        const el = document.getElementById('loading-screen')
+        if (!el) return
+
+        el.classList.add('fade-out')
+
+        setTimeout(() => {
+          el.remove()
+        }, 200)
+      }
+    </script>
+  </body>
+</html>

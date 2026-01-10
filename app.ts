@@ -2,11 +2,11 @@ import express, { Request, Response } from 'express'
 import { fileURLToPath } from 'url'
 import path from 'path'
 import { v4 as uuidv4 } from 'uuid'
-import { Game, User, Bank, BetHistory } from './db'
+import { Game, User, Bank, BetHistory, OperHistory } from './db'
 
-import bot from './bot'
+import bot from './tgbot'
 import { DOMAIN, BOT_TOKEN_PROD, CRYPTOBOT } from './CONFIG.json'
-import { addUserBalance } from './db/methods'
+import { addUserBalance, checkFreespin, claimFreespin } from './db/methods'
 import { createHash, createHmac, randomUUID } from 'crypto'
 import { REF_LEVELS } from './config'
 import {
@@ -15,6 +15,7 @@ import {
   deleteInvoice,
   findAssetForTonWithdraw,
   invoiceInTON,
+  tonToUsd,
 } from './api/cryptobot'
 import { AvailableAssets, CryptoBotInvoice } from './api/cryptobot/types'
 import { InlineKeyboard } from 'grammy'
@@ -145,7 +146,7 @@ app.get('/cryptoBotCashout', async (req: Request, res: Response) => {
   }
 
   const requiredTon = Number(tonAmount)
-  if (isNaN(requiredTon) || requiredTon <= 0) {
+  if (isNaN(requiredTon) || requiredTon <= 0.5) {
     return res.status(400).json({ error: 'Invalid tonAmount' })
   }
 
@@ -165,6 +166,43 @@ app.get('/cryptoBotCashout', async (req: Request, res: Response) => {
     })
     await User.updateOne({ appToken: token }, { $inc: { balance: -toWithdraw.availableInTon } })
 
+    const phrases = [
+      '<b>Победители</b> - это <b>проигравшие</b>, которые попробовали <b>ещё раз.</b>',
+      `<b>Ты сегодня в ударе!</b> Такую полосу <b>везения нельзя прерывать.</b> Отдохни, <b>и возвращайся доминировать.</b>`,
+      `<b>CrystallJet платит всем.</b>
+Но ты доказал, 
+<b>что ты один из лучших. Возвращайся и утверди это!</b>`,
+      `Мы пополнили твой счет. 
+Используй эти <b>ресурсы мудро — удача не любит долгих пауз.</b>`,
+    ]
+
+    const randomPhrase = phrases[Math.floor(Math.random() * phrases.length)]
+
+    try {
+      const usdAmount = await tonToUsd(requiredTon)
+
+      await OperHistory.create({
+        userId: user?.id,
+        operType: 'cashout',
+        tonAmount: requiredTon,
+        currency: toWithdraw.currency,
+        currencyAmount: toWithdraw.available,
+        usdAmount: usdAmount,
+      })
+
+      await bot.api.sendMessage(
+        user?.id,
+        `<b>💸 ЗАЯВКА НА ВЫВОД ${requiredTon} ТОN была обработана! <u>${String(toWithdraw.available.toFixed(2))} ${
+          toWithdraw.currency
+        }</u> были начислены на ваш баланс.</b>
+<blockquote><i>${randomPhrase}</i></blockquote>`,
+        {
+          reply_markup: new InlineKeyboard().webApp('🚀 Играть', `https://${DOMAIN}?token=${user?.appToken}`),
+          message_effect_id: '5046509860389126442',
+        }
+      )
+    } catch {}
+
     res.json({ ok: true, link: check.bot_check_url })
   } catch (error) {
     console.error('Error in cryptoBotCashout:', error)
@@ -183,6 +221,18 @@ app.get('/refsInfo', async (req: Request, res: Response) => {
   })
 })
 
+app.get('/freespinAvailable', async (req: Request, res: Response) => {
+  const { token } = req.query
+  const available = await checkFreespin(String(token))
+  res.json(available)
+})
+
+app.get('/claimFreespin', async (req: Request, res: Response) => {
+  const { token } = req.query
+  const claimed = await claimFreespin(String(token))
+  res.json(claimed)
+})
+
 // CSS и JS из /assets
 app.use('/assets', express.static(path.join(DIST_DIR, 'assets')))
 
@@ -194,28 +244,7 @@ app.get('/', (req: Request, res: Response) => {
   res.sendFile(path.join(DIST_DIR, 'index.html'))
 })
 
-const WEBHOOK_PATH = `/webhook/${BOT_TOKEN_PROD}`
-
-const IS_PROD_MODE = process.env.CONFIG_ENV === 'prod'
-if (IS_PROD_MODE) {
-  bot.api.setWebhook(`https://${DOMAIN}${WEBHOOK_PATH}`, {
-    drop_pending_updates: true,
-  })
-} else {
-  bot.api.deleteWebhook({
-    drop_pending_updates: true,
-  })
-}
-
 app.use(express.json())
-app.post(WEBHOOK_PATH, async (req, res) => {
-  try {
-    await bot.handleUpdate(req.body)
-  } catch (err) {
-    console.warn('Ошибка при обработке апдейта:', (err as Error).message)
-  }
-  res.sendStatus(200)
-})
 
 const checkSignature = (token: string, body: any, headers: any) => {
   const secret = createHash('sha256').update(token).digest()
@@ -240,18 +269,38 @@ app.post('/cryptoBot', async (req, res) => {
   console.log(`invoice ID: ${invoiceId}`)
 
   const invoiceAmount = await invoiceInTON(payload)
+
   const user = await addUserBalance({ invoiceId }, invoiceAmount)
+  const phrases = [
+    'В новом году фейерверки летят выше чем обычно… испытай удачу по полной!',
+    'Опробуйте свою удачу сполна и познайте путь истинных победителей по жизни!',
+    `Деньги любят <b>тишину,</b> но еще больше они <b>любят смелых.</b>`,
+    `<b>Риск — это цена,</b> которую мы платим за <b>возможность</b> пить <b>шампанское.</b>`,
+  ]
+
+  const randomPhrase = phrases[Math.floor(Math.random() * phrases.length)]
+
   try {
+    await OperHistory.create({
+      userId: user?.id,
+      operType: 'topup',
+      tonAmount: invoiceAmount,
+      currency: payload.paid_asset,
+      currencyAmount: Number(payload.paid_amount),
+      usdAmount: Number(payload.paid_amount) * Number(payload.paid_usd_rate),
+    })
+
     await bot.api.sendMessage(
       user?.id,
-      `🎉 УСПЕШНО! ${invoiceAmount.toFixed(2)} TON были начислены на ваш баланс.
-<blockquote><b>Обычно к новому году фейерверки летят выше чем обычно…</b></blockquote>`,
+      `<b>🎉 УСПЕШНО! <u>${invoiceAmount.toFixed(2)}</u> TON были начислены на ваш баланс.</b>
+<blockquote><i>${randomPhrase}</i></blockquote>`,
       {
         reply_markup: new InlineKeyboard().webApp('🚀 Играть', `https://${DOMAIN}?token=${user?.appToken}`),
         message_effect_id: '5046509860389126442',
       }
     )
   } catch {}
+
   res.sendStatus(200)
 })
 

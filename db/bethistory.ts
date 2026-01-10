@@ -11,6 +11,9 @@ const betHistorySchema = new Schema({
   createdAt: { type: Date, default: Date.now },
   gameId: { type: String },
 })
+betHistorySchema.index({ createdAt: 1 })
+betHistorySchema.index({ userToken: 1 })
+betHistorySchema.index({ gameId: 1 })
 
 export type BetHistory = InferSchemaType<typeof betHistorySchema>
 const BetHistoryModel = model<BetHistory>('BetHistory', betHistorySchema)
