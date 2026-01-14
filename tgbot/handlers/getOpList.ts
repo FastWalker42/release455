@@ -1,69 +1,53 @@
 import { Context } from 'grammy'
 import { Reflink, User } from '../../db'
-import CONFIG from '../../CONFIG.json'
+
+const CHANNELS = [
+  { id: -1002214775405, name: '💎Канал' },
+  { id: -1002213278790, name: '💎Чат' },
+]
 
 export default async (ctx: Context) => {
   if (!ctx.from) return []
-  const { id } = ctx.from
 
-  /*const payload = (await User.findOne({ id: ctx.from?.id }))?.activeGiveaway
-
-  const reflink = await Reflink.findOne({ payload })
-
-  const channels = reflink?.giveAway?.channels ?? []*/
-  const channels = []
-  for (const id of CONFIG.CHANNEL_IDS) {
-    channels.push(String(id))
-  }
-
+  const userId = ctx.from.id
   const opList: { name: string; url: string }[] = []
 
-  let userNotSubscribed = false
-  let hasConfirmedSubscription = false
-
-  let inviteUrl: string | null = null
-  for (const id of channels) {
+  for (const channel of CHANNELS) {
     try {
-      try {
-        const chat = await ctx.api.getChat(id)
-        if (chat.invite_link) {
-          inviteUrl = chat.invite_link
-        } else {
-          // Создаем новую ссылку если нет существующей
-          const invite = await ctx.api.createChatInviteLink(id, {
-            creates_join_request: false,
-          })
-          inviteUrl = invite.invite_link
-        }
-      } catch (error) {
-        console.error(`Ошибка получения invite link для канала ${id}:`, error)
-        continue
-      }
-
-      // Проверяем подписку
-      const member = await ctx.api.getChatMember(id, ctx.from.id)
+      // Проверка подписки
+      const member = await ctx.api.getChatMember(channel.id, userId)
       const isSubscribed = ['creator', 'administrator', 'member'].includes(member.status)
 
-      if (isSubscribed) {
-        hasConfirmedSubscription = true
-      } else if (inviteUrl) {
-        userNotSubscribed = true
-        opList.push({ name: 'Спонсор', url: inviteUrl })
+      if (isSubscribed) continue
+
+      // Получаем или создаём invite link
+      const chat = await ctx.api.getChat(channel.id)
+
+      let inviteUrl = chat.invite_link
+      if (!inviteUrl) {
+        const invite = await ctx.api.createChatInviteLink(channel.id, {
+          creates_join_request: false,
+        })
+        inviteUrl = invite.invite_link
+      }
+
+      if (inviteUrl) {
+        opList.push({
+          name: channel.name,
+          url: inviteUrl,
+        })
       }
     } catch (error) {
-      console.error(`Ошибка при проверке подписки на канал ${id}:`, error)
+      console.error(`Ошибка для ${channel.id}:`, error)
     }
   }
 
+  // Если подписан на всё — активируем
   if (opList.length === 0) {
-    const user = await User.findOneAndUpdate(
-      { id },
-      { activated: true },
-      { returnDocument: 'before' } // получаем ДО обновления
-    )
+    const user = await User.findOneAndUpdate({ id: userId }, { activated: true }, { returnDocument: 'before' })
 
     if (user && !user.activated && user.activeGiveaway) {
-      await User.updateOne({ id }, { $inc: { balance: 0.1 } })
+      await User.updateOne({ id: userId }, { $inc: { balance: 0.1 } })
     }
   }
 

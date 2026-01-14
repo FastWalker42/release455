@@ -19,7 +19,8 @@ export default async (ctx: Context) => {
 
 <blockquote>🎯 Ставок всего: ${stats.allTime.bets.totalBets}
 💰 Оборот: ${stats.allTime.bets.totalAmount}
-📈 Профит: ${stats.allTime.profit.profit}</blockquote>
+📈 Ресурс банка: ${stats.allTime.profit.profit * CONFIG.GAME.TARGET_RTP}
+🤑 HOUSE EDGE: ${stats.allTime.profit.profit * (1 - CONFIG.GAME.TARGET_RTP)}</blockquote>
 
 <blockquote>💎 Депозиты/Выводы (всего):
 TON: ↗️ ${stats.allTime.depositWithdraw.topupTON.toFixed(2)} / ↘️ ${stats.allTime.depositWithdraw.cashoutTON.toFixed(2)}

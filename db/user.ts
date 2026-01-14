@@ -10,6 +10,7 @@ const userSchema = new Schema({
   refType: { type: String, default: null },
 
   name: { type: String, default: null },
+  informed: { type: Boolean, default: false },
   activated: { type: Boolean, default: false },
   activeGiveaway: { type: String, default: null },
   balance: { type: Number, default: 0 },

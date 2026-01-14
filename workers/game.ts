@@ -14,8 +14,8 @@ const publisher = redis.duplicate()
 await publisher.connect()
 
 let COEFF: number = 1.0
-const GROWTH_RATE = 0.01
-const TICK_INTERVAL = 100
+const GROWTH_RATE = 0.009
+const TICK_INTERVAL = 110
 
 // Подписка на события банка
 await subscriber.subscribe('BANKCRASH', (message) => {
@@ -50,17 +50,23 @@ async function REDIS_addLastCrash(coeff: number) {
 let currentGameInterval: NodeJS.Timeout | null = null
 
 function shouldCrash(coeff: number) {
-  console.log(coeff)
   const min = GAME.MIN_COEFF
   const max = GAME.MAX_COEFF
 
-  const t = (coeff - min) / (max - min) // 0..1
+  const t = (coeff - min) / (max - min)
 
-  // Смягчённый инвертированный колокол
-  // Пик на краях = 0.5, минимум в середине = 0.1
-  const minChance = 0.01
-  const maxChance = 0.025
-  const chance = minChance + (maxChance - minChance) * (1 - 4 * t * (1 - t))
+  let minChance = 0.01
+  let maxChance = 0.025
+
+  // базовая кривая
+  let chance = minChance + (maxChance - minChance) * Math.pow(1 - 4 * t * (1 - t), 3)
+
+  // повышаем шанс для высоких коэффициентов
+  if (coeff > 8) chance *= 2 // немного выше для 8+
+  if (coeff > 9) chance *= 4 // сильно выше для 9+
+
+  // ограничим максимум, чтобы не вышло >1
+  chance = Math.min(chance, 0.9)
 
   return Math.random() < chance
 }
@@ -124,26 +130,29 @@ async function startGame() {
     await endGame(COEFF)
     return
   }
+  await publisher.publish('COEFF', COEFF.toFixed(2))
 
-  currentGameInterval = setInterval(async () => {
-    COEFF *= 1 + GROWTH_RATE
-    if (COEFF > GAME.MAX_COEFF) COEFF = GAME.MAX_COEFF
+  setTimeout(() => {
+    currentGameInterval = setInterval(async () => {
+      COEFF *= 1 + GROWTH_RATE
+      if (COEFF > GAME.MAX_COEFF) COEFF = GAME.MAX_COEFF
 
-    await publisher.publish('COEFF', COEFF.toFixed(2))
+      await publisher.publish('COEFF', COEFF.toFixed(2))
 
-    // Рандомный краш
-    if (shouldCrash(COEFF)) {
-      console.log('Random crash triggered!')
-      clearInterval(currentGameInterval!)
-      await endGame(COEFF)
-      return
-    }
+      // Рандомный краш
+      if (shouldCrash(COEFF)) {
+        console.log('Random crash triggered!')
+        clearInterval(currentGameInterval!)
+        await endGame(COEFF)
+        return
+      }
 
-    // Плановый краш
-    if (COEFF >= GAME.MAX_COEFF) {
-      clearInterval(currentGameInterval!)
-      await endGame(COEFF)
-    }
+      // Плановый краш
+      if (COEFF >= GAME.MAX_COEFF) {
+        clearInterval(currentGameInterval!)
+        await endGame(COEFF)
+      }
+    }, TICK_INTERVAL)
   }, TICK_INTERVAL)
 }
 

@@ -37,12 +37,19 @@ export default async (ctx: Context, payload: string) => {
     : '—'
 
   const foundGift = AVAILABLE_GIFTS.find((g) => g.id === reflink.giveAway?.giftId)
+  const participants = await User.countDocuments(
+    { activated: true, invited_by: reflink.payload, activeGiveaway: true },
+    { id: 1 }
+  )
+
   return ctx.reply(
     `<b>${reflink.name}</b>
 
 <blockquote>👥 Всего переходов: ${reflink.usersJoined}</blockquote>
 <blockquote>🚀 Переходов сегодня: ${todayUsersCount}</blockquote>
 <blockquote>🤑 Прибыль: ${reflink.totalLost}</blockquote>
+<blockquote>🧢 Зарегалось: ${participants}</blockquote>
+
 
 🎁РОЗЫГРЫШ🎁: <blockquote>${
       reflink.giveAway?.enabled

@@ -53,8 +53,7 @@ export default async function claimPrize(ctx: Context) {
 
     // 🔹 Отправляем подарок
     await ctx.api.sendGift(userId, giftId, {
-      text: `<b>ПОЗДРАВЛЯЕМ🎉
-ТЫ ВЫИГРАЛ В КОНКУРСЕ!</b>`,
+      text: `🎉💎 ПОЛУЧИ ФРИБЕТ В @CRYSTALLJET`,
       text_parse_mode: 'HTML',
     })
   } catch (err) {

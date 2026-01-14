@@ -1,7 +1,7 @@
 import CONFIG from '../../CONFIG.json'
 import { CryptoBotCheck, CryptoBotCheckParams, CryptoBotInvoice, CryptoBotInvoiceParams } from './types'
 
-const BASE_URL = 'https://testnet-pay.crypt.bot/api'
+const BASE_URL = 'https://pay.crypt.bot/api'
 
 const fetchCryptoBot = async (endpoint: string, options?: RequestInit) => {
   const res = await fetch(`${BASE_URL}/${endpoint}`, {

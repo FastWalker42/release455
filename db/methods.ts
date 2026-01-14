@@ -22,9 +22,14 @@ export const checkUser = async (
     if (inviter) {
       inviter.refsCount = (inviter.refsCount || 0) + 1
       await inviter.save()
-      await bot.api.sendMessage(inviter.id, `УРА!🎉 У вас новый реферал ${data.username || ''}`, {
-        message_effect_id: '5159385139981059251',
-      })
+      await bot.api.sendMessage(
+        inviter.id,
+        `УРА!🎉 
+У вас новый реферал ${data.username || ''}`,
+        {
+          message_effect_id: '5159385139981059251',
+        }
+      )
     }
   }
   let activeGiveaway = null

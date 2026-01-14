@@ -32,7 +32,7 @@ export const finishExpiredGiveaways = async (): Promise<FinishedGiveawayResult[]
     const places = reflink?.giveAway?.places || 1
 
     // 2. Получаем всех участников розыгрыша
-    const users = await User.find({ invited_by: reflink.payload, activeGiveaway: true }, { id: 1 })
+    const users = await User.find({ activated: true, invited_by: reflink.payload, activeGiveaway: true }, { id: 1 })
 
     if (users.length === 0) {
       // просто выключаем розыгрыш, если нет участников
